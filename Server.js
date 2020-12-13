@@ -80,6 +80,7 @@ function SDTServer(id){
         var msg=Msg(JSON.stringify(encrypted),_randstr);
         Send(msg);
     }
+    exports.getStatus=()=>status;
     exports.InternalSend=InternalSend;
     exports.onReceive=onReceive;
     exports.Setup=Setup;
