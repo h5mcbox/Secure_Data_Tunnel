@@ -13,11 +13,11 @@ var StringTools={
     encode:(e)=>e.split("").map(e=>e.charCodeAt(0))
 }
 var Send,Output,Close,Key,Keyid,status;
-var ValidateSessionKey,SessionKey;
+var SessionKey;
 var Client_hello=(kid,rs)=>`{"type":"Client_hello","Keyid":"${kid}","Randstr":"${rs}"}`;
 var Client_KeyExchange=(kid,rs)=>`{"type":"Client_KeyExchange","Keyid":"${kid}","Randstr":"${rs}"}`;
 var Client_KeyCheck=()=>`{"type":"Client_KeyCheck"}`;
-var Msg=(c,r)=>`{"type":"Message","Content":"${c}","Randstr":"${r}"}`;
+var Msg=(c,r,k)=>`{"type":"Message","Content":"${c}","Randstr":"${r}","Keyid":"${k}"}`;
 
 function Setup(send,output,close,keyid,key){
     Send=send;
@@ -28,7 +28,7 @@ function Setup(send,output,close,keyid,key){
     HandShake_Step1();
 }
 function onReceive(data){
-    //try{
+    try{
         var ObjData=JSON.parse(data);
         if(ObjData.type==="Server_hello"){
             if(status!="HandShake_Step1"){Close("Unexcept status.");throw false;}
@@ -46,7 +46,8 @@ function onReceive(data){
         
         if(ObjData.type==="Server_MsgResponse"){
             if(!((status=="HandShake_Step2_Finished")||(status=="Finished"))){throw "Error."}
-            var data = StrTools.decode(rc4(JSON.parse(ObjData.Content),StringTools.encode(SessionKey)));
+            SessionKey=sha256(Key+ObjData.Randstr);
+            var data = StringTools.decode(rc4(JSON.parse(ObjData.Content),StringTools.encode(SessionKey)));
             if(status=="HandShake_Step2_Finished"){
                 if(JSON.parse(data).type=="Finished."){}
                 status="Finished";
@@ -54,7 +55,7 @@ function onReceive(data){
             };
             Output(data);
         }
-    //}catch{return false;}
+    }catch{return false;}
 }
 function HandShake_Step1(){
     var ExchangeString=randstr(20);
@@ -76,9 +77,9 @@ function InternalSend(data){
     //var data=Client_KeyCheck();
     var _randstr=randstr(20);
     var databin=StringTools.encode(data);
-    var encrypted=rc4(databin,StringTools.encode(SessionKey));
     SessionKey=sha256(Key+_randstr)
-    var msg=Msg(JSON.stringify(encrypted),_randstr);
+    var encrypted=rc4(databin,StringTools.encode(SessionKey));
+    var msg=Msg(JSON.stringify(encrypted),_randstr,Keyid);
     Send(msg);
 }
 Exports.InternalSend=InternalSend;
