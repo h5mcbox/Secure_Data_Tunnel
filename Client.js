@@ -12,19 +12,20 @@ var StringTools={
     decode:(e)=>(e.map(e=>String.fromCharCode(e))).join(""),
     encode:(e)=>e.split("").map(e=>e.charCodeAt(0))
 }
-var Send,Output,Close,Key,Keyid,status;
+var Send,Output,Close,Key,Keyid,Finished_callback,status;
 var SessionKey;
 var Client_hello=(kid,rs)=>`{"type":"Client_hello","Keyid":"${kid}","Randstr":"${rs}"}`;
 var Client_KeyExchange=(kid,rs)=>`{"type":"Client_KeyExchange","Keyid":"${kid}","Randstr":"${rs}"}`;
 var Client_KeyCheck=()=>`{"type":"Client_KeyCheck"}`;
 var Msg=(c,r,k)=>`{"type":"Message","Content":"${c}","Randstr":"${r}","Keyid":"${k}"}`;
 
-function Setup(send,output,close,keyid,key){
+function Setup(send,output,close,keyid,key,callback=function(){}){
     Send=send;
     Output=output;
     Close=close;
     Key=key;
     Keyid=keyid;
+    Finished_callback=callback;
     HandShake_Step1();
 }
 function onReceive(data){
@@ -51,6 +52,7 @@ function onReceive(data){
             if(status=="HandShake_Step2_Finished"){
                 if(JSON.parse(data).type=="Finished."){}
                 status="Finished";
+                Finished_callback();
                 return true;
             };
             Output(data);
